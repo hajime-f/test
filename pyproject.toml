@@ -7,7 +7,9 @@ authors = ["Hajime Fujita <hajime.fujita@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.8"
 websocket-client = "*"
+numpy = "*"
 pandas = "^1.3.0"
+matplotlib = "*"
 
 [tool.poetry.dev-dependencies]
 
