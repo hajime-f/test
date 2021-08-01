@@ -1,5 +1,5 @@
 all:
-	poetry run python pd_dataframe.py
+	poetry run python sqlite3_test.py
 
 install:
 	poetry install
