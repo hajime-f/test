@@ -14,10 +14,6 @@ file_name = './mu_params'
 np.savez(file_name, **d)
 
 d = np.load(file_name + '.npz')
-
 mu = [d['mu_' + str(i)] for i in range(M)]
 
-# for i in range(M):
-#     key = 'mu_' + str(i)
-#     mu.append(d[key])
 print(mu)
