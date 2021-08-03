@@ -11,15 +11,15 @@ df = pd.DataFrame([
                   columns=['a', 'b', 'c', 'd'])
 
 file_sqlite3 = "./cities.db"
-conn = sqlite3.connect(file_sqlite3)
-df.to_sql('cities',conn,if_exists='append',index=None)
-conn.close()
 
+conn = sqlite3.connect(file_sqlite3)
+df.to_sql('cities', conn, if_exists='append', index=None)
+conn.close()
 
 df.loc['row3'] = {'a': 't1273', 'b': '西宮', 'c': '23423', 'd': '2021-08-02'}
 
 conn = sqlite3.connect(file_sqlite3)
-df.tail(1).to_sql('cities',conn,if_exists='append',index=None)
+df.tail(1).to_sql('cities', conn, if_exists='append', index=None)
 conn.close()
 
 sys.stderr.write("*** 終了 ***\n")
