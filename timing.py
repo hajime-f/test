@@ -1,5 +1,4 @@
 from datetime import datetime as dt
-import time
 
 flag = False
 
