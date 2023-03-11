@@ -1,44 +1,56 @@
 """Livedoorニュースを分類するプログラム"""
 
 import pandas as pd
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from transformers import AutoModelForCausalLM, T5Tokenizer
 
 if __name__ == '__main__':
 
     # データの読み込み
-    data = pd.read_csv('livedoornews.csv')
+    data = pd.read_csv('livedoor_news.csv')
 
-    # 空のデータフレームを用意する
-    df = pd.DataFrame(columns=['words', 'category'])
+    # データの分割
+    data_train = data.iloc[:5000, :]
+    data_test = data.iloc[5000:, :]
 
-    for i in range(len(data)):
+    # モデルの読み込み
+    tokenizer = T5Tokenizer.from_pretrained("rinna/japanese-gpt-1b")
+    model = AutoModelForCausalLM.from_pretrained("rinna/japanese-gpt-1b")
+    if torch.cuda.is_available():
+        model = model.to("cuda")
 
-        title = data.title[i].replace('\n', '')
-        body = data.body[i].replace('\n', '')
+    # モデルの構造を変更（最終レイヤー関数の付け替え）
+    in_features = model.lm_head.in_features
+    model.lm_head = nn.Linear(in_features, 9)
 
-        if data.media[i] == 'movie-enter':
-            category = 0
-        elif data.media[i] == 'it-life-hack':
-            category = 1
-        elif data.media[i] == 'kaden-channel':
-            category = 2
-        elif data.media[i] == 'topic-news':
-            category = 3
-        elif data.media[i] == 'livedoor-homme':
-            category = 4
-        elif data.media[i] == 'peachy':
-            category = 5
-        elif data.media[i] == 'sports-watch':
-            category = 6
-        elif data.media[i] == 'dokujo-tsushin':
-            category = 7
-        elif data.media[i] == 'smax':
-            category = 8
-        else:
-            category = -1
+    # 損失関数を定義
+    criterion = nn.CrossEntropyLoss()
 
-        df_append = pd.DataFrame(data={'words': [title + body],
-                                       'category': [category]})
-        df = pd.concat([df, df_append], ignore_index=True)
+    # 最適化手法を定義
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    # データの保存
-    df.to_csv('livedoor_news.csv', index=False)
+    # 学習用データを準備
+    for i, row in data_train.iterrows():
+        token_ids = tokenizer.encode(
+            row['words'], add_special_tokens=False, return_tensors="pt")
+        with torch.no_grad():
+            output_ids = model.generate(
+                token_ids.to(model.device),
+                max_length=100,
+                min_length=100,
+                do_sample=True,
+                top_k=500,
+                top_p=0.95,
+                pad_token_id=tokenizer.pad_token_id,
+                bos_token_id=tokenizer.bos_token_id,
+                eos_token_id=tokenizer.eos_token_id
+            )
+        breakpoint()
+
+    # 学習
+    model.train()
+    for epoch in range(10):
+
+        breakpoint()
