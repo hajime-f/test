@@ -1,40 +1,49 @@
-"""テストプログラムです"""
-
-import matplotlib.pyplot as plt
-import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn import datasets
 from sklearn.model_selection import train_test_split
 
+iris = datasets.load_iris()
+xtrain, xtest, ytrain, ytest = train_test_split(
+    iris.data, iris.target, test_size=0.5)
 
-def func_1(input_x1, input_x2):
-    """Schaal関数の実装"""
-
-    output_y = []
-
-    for x_1, x_2 in zip(input_x1, input_x2):
-
-        tmp = np.sqrt(np.power(x_1, 2) + np.power(x_2, 2))
-        y_i = np.sin(tmp) / tmp
-
-        output_y.append(y_i)
-
-    return np.array(output_y)
+xtrain = torch.from_numpy(xtrain).type('torch.FloatTensor')
+ytrain = torch.from_numpy(ytrain).type('torch.LongTensor')
+xtest = torch.from_numpy(xtest).type('torch.FloatTensor')
+ytest = torch.from_numpy(ytest).type('torch.LongTensor')
 
 
-N = 2
-T = 1000
-data_x = 20 * np.random.rand(T, N) - 10
-data_y = func_1(data_x[:, 0], data_x[:, 1])
+class TwoLayerNN(nn.Module):
+    def __init__(self, n_input, n_hidden, n_output):
+        super(TwoLayerNN, self).__init__()
+        self.l1 = nn.Linear(n_input, n_hidden)
+        self.l2 = nn.Linear(n_hidden, n_output)
 
-xtrain, xtest, ytrain, ytest = train_test_split(data_x, data_y, test_size=0.1)
+    def forward(self, x):
+        h1 = torch.sigmoid(self.l1(x))
+        h2 = self.l2(h1)
+        return h2
 
-wire_x1 = np.linspace(-10, 10, 100)
-wire_x2 = np.linspace(-10, 10, 100)
-X1, X2 = np.meshgrid(wire_x1, wire_x2)
 
-fig = plt.figure(figsize=(8, 8))
-ax = fig.add_subplot(projection='3d')
+model = TwoLayerNN(4, 6, 3)
+optimizer = optim.SGD(model.parameters(), lr=0.1)
+loss_function = nn.CrossEntropyLoss()
 
-ax.plot_wireframe(X1, X2, func_1(X1, X2), alpha=0.5)
-ax.scatter(xtrain[:, 0], xtrain[:, 1], ytrain, color='red', label='label')
+model.train()
+for i in range(1000):
+    output = model(xtrain)
+    loss = loss_function(output, ytrain)
 
-plt.show()
+    breakpoint()
+
+    print(i, loss.item())
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+model.eval()
+with torch.no_grad():
+    output1 = model(xtest)
+    ans = torch.argmax(output1, 1)
+    print(((ytest == ans).sum().float() / len(ans)).item())

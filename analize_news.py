@@ -4,7 +4,23 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from sklearn.model_selection import train_test_split
 from transformers import AutoModelForCausalLM, T5Tokenizer
+
+
+class NewsClassifier(nn.Module):
+
+    def __init__(self):
+        super(NewsClassifier, self).__init__()
+        self.tokenizer = T5Tokenizer.from_pretrained("rinna/japanese-gpt-1b")
+        self.rinna = AutoModelForCausalLM.from_pretrained(
+            "rinna/japanese-gpt-1b")
+        self.classifier = nn.Linear(self.rinna.lm_head.out_features, 9)
+
+    def forward(self, input_ids):
+        output = self.rinna(input_ids=input_ids)
+        return self.classifier(output[0][:, -1, :])
+
 
 if __name__ == '__main__':
 
@@ -12,45 +28,44 @@ if __name__ == '__main__':
     data = pd.read_csv('livedoor_news.csv')
 
     # データの分割
-    data_train = data.iloc[:5000, :]
-    data_test = data.iloc[5000:, :]
+    train, test = train_test_split(data, test_size=0.2, random_state=0)
 
-    # モデルの読み込み
-    tokenizer = T5Tokenizer.from_pretrained("rinna/japanese-gpt-1b")
-    model = AutoModelForCausalLM.from_pretrained("rinna/japanese-gpt-1b")
-    if torch.cuda.is_available():
-        model = model.to("cuda")
+    # モデルの定義
+    model = NewsClassifier()
 
-    # モデルの構造を変更（最終レイヤー関数の付け替え）
-    in_features = model.lm_head.in_features
-    model.lm_head = nn.Linear(in_features, 9)
-
-    # 損失関数を定義
-    criterion = nn.CrossEntropyLoss()
-
-    # 最適化手法を定義
+    # 最適化手法の定義
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    # 学習用データを準備
-    for i, row in data_train.iterrows():
-        token_ids = tokenizer.encode(
-            row['words'], add_special_tokens=False, return_tensors="pt")
-        with torch.no_grad():
-            output_ids = model.generate(
-                token_ids.to(model.device),
-                max_length=100,
-                min_length=100,
-                do_sample=True,
-                top_k=500,
-                top_p=0.95,
-                pad_token_id=tokenizer.pad_token_id,
-                bos_token_id=tokenizer.bos_token_id,
-                eos_token_id=tokenizer.eos_token_id
-            )
-        breakpoint()
+    # 損失関数の定義
+    loss_function = nn.CrossEntropyLoss()
 
     # 学習
     model.train()
-    for epoch in range(10):
+    for epoch in range(5):
+        for _, row in train.iterrows():
 
-        breakpoint()
+            xtrain = row['words'][:1000]
+            ytrain = torch.tensor([row['category']])
+            print(xtrain)
+            ids = model.tokenizer.encode(
+                xtrain, add_special_tokens=False, return_tensors="pt")
+            outputs = model(ids)
+            loss = loss_function(outputs, ytrain)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+    model.eval()
+    with torch.no_grad():
+        for _, row in test.iterrows():
+
+            xtest = row['words'][:1000]
+            ytest = torch.tensor([row['category']])
+
+            ids = model.tokenizer.encode(
+                xtest, add_special_tokens=False, return_tensors="pt")
+
+            outputs = model(ids)
+            ans = torch.argmax(outputs, 1)
+
+            breakpoint()
