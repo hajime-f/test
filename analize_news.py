@@ -41,31 +41,49 @@ if __name__ == '__main__':
 
     # 学習
     model.train()
-    for epoch in range(5):
-        for _, row in train.iterrows():
+    for _, row in train.iterrows():
 
-            xtrain = row['words'][:1000]
-            ytrain = torch.tensor([row['category']])
-            print(xtrain)
-            ids = model.tokenizer.encode(
-                xtrain, add_special_tokens=False, return_tensors="pt")
-            outputs = model(ids)
-            loss = loss_function(outputs, ytrain)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        # 学習データの準備
+        xtrain = row['words'][:1000]
+        ytrain = torch.tensor([row['category']])
 
+        # モデルの出力を得る
+        ids = model.tokenizer.encode(
+            xtrain, add_special_tokens=False, return_tensors="pt")
+        outputs = model(ids)
+
+        # 損失の計算
+        loss = loss_function(outputs, ytrain)
+
+        # 勾配の初期化
+        optimizer.zero_grad()
+
+        # 勾配の計算
+        loss.backward()
+
+        # パラメータの更新
+        optimizer.step()
+
+    sum_ans = 0
+
+    # テスト
     model.eval()
     with torch.no_grad():
         for _, row in test.iterrows():
 
+            # テストデータの準備
             xtest = row['words'][:1000]
             ytest = torch.tensor([row['category']])
 
+            # モデルの出力を得る
             ids = model.tokenizer.encode(
                 xtest, add_special_tokens=False, return_tensors="pt")
-
             outputs = model(ids)
             ans = torch.argmax(outputs, 1)
 
-            breakpoint()
+            # 答え合わせ
+            if ans == ytest:
+                sum_ans += 1
+
+    print(sum_ans / len(test))
+    breakpoint()
